@@ -377,7 +377,7 @@ pres.addSection({ title: "Close" });
   });
   s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 3.75, w: 9, h: 1.2, fill: { color: K.paper }, line: { color: K.paper, width: 0 }, objectName: "closing band" });
   T(s, "The model reads once. Code decides every time.", { x: 0.75, y: 3.9, w: 8.5, h: 0.5, fontFace: HEAD, fontSize: 22, color: K.ink, charSpacing: -0.5 });
-  T(s, "Paatrata · पात्रता  |  team clawops  |  github.com/<team>/paatrata  |  Apache-2.0", { x: 0.75, y: 4.45, w: 8.5, h: 0.35, fontSize: 11, color: K.ink2 });
+  T(s, "Live: paatrata.onrender.com  |  github.com/ipshitabhardwaj/Paatrata  |  Apache-2.0  |  team clawops", { x: 0.75, y: 4.45, w: 8.5, h: 0.35, fontSize: 11, color: K.ink2 });
   s.addNotes("For the finale: circular delta, official notifications, measured Gemma results, and full Hindi and Punjabi. The core idea in one line: the model reads once; code decides every time.");
 }
 

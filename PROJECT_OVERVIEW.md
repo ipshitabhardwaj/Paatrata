@@ -4,6 +4,8 @@
 **Team:** clawops: Veydant Bhardwaj, Ipshita Bhardwaj
 **Theme:** Innovative Solution for AI for Digital Public Infrastructure of Chandigarh
 **Also entered for:** Bonus Challenge, Best Open-Source AI Project
+**Repository:** https://github.com/ipshitabhardwaj/Paatrata (public, Apache-2.0)
+**Live demo:** https://paatrata.onrender.com
 
 ---
 
@@ -100,7 +102,7 @@ integration with any government system.
 | **Google AI Studio** | API keys; hosted **Gemma 4** for the open-weight extractor | Built |
 | **Gemma 4 (open weights)** | Same compiler, locally via Ollama, for on-premise use | Built; to be measured |
 | **Gemini Multimodal** | Scanned PDFs without a text layer are sent to Gemini as PDF | Built |
-| **Cloud Run** | Deployment target for the Docker image (API + UI in one container) | Ready (Dockerfile) |
+| **Cloud Run** | Deployment target for the Docker image (API + UI in one container) | Ready (Dockerfile); demo currently hosted on Render |
 | **Agent Skill Open Standard** | Lets Gemini CLI and other agents compile and check schemes | Built |
 | Cloud Translation, Speech-to-Text, Text-to-Speech, Dialogflow | Not used; Gemini handles translation. Voice is a roadmap item | Not used |
 | Vertex AI, BigQuery, Firebase, Maps, Earth Engine, LiteRT | Not needed for this problem | Not used |
