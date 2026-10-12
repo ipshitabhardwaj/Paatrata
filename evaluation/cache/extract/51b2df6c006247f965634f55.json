@@ -1,0 +1,17 @@
+{
+  "raw_text": "{\n  \"scheme_name\": \"Old Age Pension, Chandigarh (OAPC)\",\n  \"department\": \"Social Welfare, Women & Child Development, Chandigarh Administration\",\n  \"jurisdiction\": \"Chandigarh\",\n  \"benefit_summary\": \"A pension of Rs. 1,000 per month.\",\n  \"groups\": [\n    {\n      \"id\": \"root\",\n      \"logic\": \"ALL\",\n      \"parent\": null\n    }\n  ],\n  \"conditions\": [\n    {\n      \"id\": \"c1\",\n      \"group\": \"root\",\n      \"field\": \"family_annual_income_inr\",\n      \"op\": \"<=\",\n      \"value\": \"150000\",\n      \"value_as_written\": \"Rs. 1,50,000\",\n      \"quote\": \"The family annual income of the applicant should not exceed Rs. 1,50,000.\",\n      \"page\": 1,\n      \"confidence\": 1.0,\n      \"ambiguity\": null\n    },\n    {\n      \"id\": \"c2\",\n      \"group\": \"root\",\n      \"field\": \"age_years\",\n      \"op\": \">=\",\n      \"value\": \"60\",\n      \"value_as_written\": \"60 years of age or above\",\n      \"quote\": \"The applicant should be 60 years of age or above.\",\n      \"page\": 1,\n      \"confidence\": 1.0,\n      \"ambiguity\": null\n    },\n    {\n      \"id\": \"c3\",\n      \"group\": \"root\",\n      \"field\": \"residence_years_in_jurisdiction\",\n      \"op\": \">\",\n      \"value\": \"3\",\n      \"value_as_written\": \"more than 3 years\",\n      \"quote\": \"The applicant should have been residing in Chandigarh UT for more than 3 years.\",\n      \"page\": 1,\n      \"confidence\": 1.0,\n      \"ambiguity\": null\n    },\n    {\n      \"id\": \"c4\",\n      \"group\": \"root\",\n      \"field\": \"is_domicile_of_jurisdiction\",\n      \"op\": \"==\",\n      \"value\": \"true\",\n      \"value_as_written\": \"from Chandigarh\",\n      \"quote\": \"Only applicants from Chandigarh are eligible.\",\n      \"page\": 1,\n      \"confidence\": 0.95,\n      \"ambiguity\": null\n    }\n  ],\n  \"unmapped_conditions\": [],\n  \"documents_required\": [\n    \"Two passport-size photographs\",\n    \"proof of residence for three years (voter card, ration card or electricity bill)\",\n    \"Aadhaar card\",\n    \"mobile number\"\n  ]\n}",
+  "meta": {
+    "backend": "gemini",
+    "model": "gemini-flash-latest",
+    "latency_ms": 31415,
+    "cache_hit": false,
+    "input_tokens": 1086,
+    "output_tokens": 645,
+    "attempts": 2,
+    "error": null
+  },
+  "cache_key": "51b2df6c006247f965634f55",
+  "doc_title": "oapc_chandigarh.txt",
+  "doc_sha256": "829300a16deab209b60475f3947ae761b46f950f483ac552c9553cffdbbdd18a",
+  "saved_at": "2026-10-11T21:13:01"
+}

@@ -1,0 +1,147 @@
+{
+  "schema_version": "0.1",
+  "scheme_id": "icds-chandigarh",
+  "scheme_name": "ICDS, Chandigarh",
+  "department": "Health Department (as listed)",
+  "jurisdiction": "Chandigarh (UT)",
+  "benefit_summary": "Nutrition, immunisation, health check-up, referral, pre-school and health education",
+  "groups": [
+    {
+      "id": "root",
+      "logic": "ANY",
+      "parent": null
+    },
+    {
+      "id": "adolescent_girl",
+      "logic": "ALL",
+      "parent": "root"
+    }
+  ],
+  "conditions": [
+    {
+      "id": "g1",
+      "group": "root",
+      "field": "age_years",
+      "op": "<=",
+      "value": 6.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Children in the age group of 0-6 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g2",
+      "group": "root",
+      "field": "is_pregnant",
+      "op": "==",
+      "value": true,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Pregnant women.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g3",
+      "group": "root",
+      "field": "is_lactating",
+      "op": "==",
+      "value": true,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Lactating mothers.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g4",
+      "group": "adolescent_girl",
+      "field": "gender",
+      "op": "==",
+      "value": "female",
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Women from age group 14-18 years of UT Chandigarh.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g5",
+      "group": "adolescent_girl",
+      "field": "age_years",
+      "op": ">=",
+      "value": 14.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Women from age group 14-18 years of UT Chandigarh.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g6",
+      "group": "adolescent_girl",
+      "field": "age_years",
+      "op": "<=",
+      "value": 18.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Women from age group 14-18 years of UT Chandigarh.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g7",
+      "group": "adolescent_girl",
+      "field": "is_domicile_of_jurisdiction",
+      "op": "==",
+      "value": true,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Women from age group 14-18 years of UT Chandigarh.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    }
+  ],
+  "unmapped_conditions": [],
+  "documents_required": [],
+  "source_doc_ids": [],
+  "extractor": "gold",
+  "_status": "DRAFT gold labelled by Claude (not by the model under test) from the source text on 2026-10-11. Ipshita must verify every condition against the source and then delete this _status line.",
+  "_labelling_note": "Root is ANY (any one beneficiary category). Ambiguity: does 'of UT Chandigarh' apply to all categories or only adolescent girls? Encoded for girls only."
+}

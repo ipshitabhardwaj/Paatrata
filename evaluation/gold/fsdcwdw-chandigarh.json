@@ -1,0 +1,137 @@
+{
+  "schema_version": "0.1",
+  "scheme_id": "fsdcwdw-chandigarh",
+  "scheme_name": "Financial Assistance to Dependent Children of Widows and Destitute Women, Chandigarh",
+  "department": "Social Welfare, Women & Child Development, Chandigarh Administration",
+  "jurisdiction": "Chandigarh (UT)",
+  "benefit_summary": "Rs. 1,000 per month per child, up to two children",
+  "groups": [
+    {
+      "id": "root",
+      "logic": "ALL",
+      "parent": null
+    },
+    {
+      "id": "who_applies",
+      "logic": "ANY",
+      "parent": "root"
+    }
+  ],
+  "conditions": [
+    {
+      "id": "g1",
+      "group": "who_applies",
+      "field": "marital_status",
+      "op": "==",
+      "value": "widowed",
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant should be a widow/destitute woman or with a dependent child/children.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g2",
+      "group": "who_applies",
+      "field": "applicant_is_legal_guardian",
+      "op": "==",
+      "value": true,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "If parents of the child/children have died, the assistance will be provided to the legal guardian.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g3",
+      "group": "root",
+      "field": "child_age_years",
+      "op": "<=",
+      "value": 18.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The age of the child/children should be less than or equal to 18 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g4",
+      "group": "root",
+      "field": "residence_years_in_jurisdiction",
+      "op": ">",
+      "value": 3.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The widow/destitute woman or the legal guardian should be a resident of the UT of Chandigarh for more than 3 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g5",
+      "group": "root",
+      "field": "child_receives_family_pension",
+      "op": "==",
+      "value": false,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The child should not be in receipt of family pension from any State/Central Govt.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g6",
+      "group": "root",
+      "field": "child_in_institutional_care",
+      "op": "==",
+      "value": false,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "Children who have been given institutional care by government/NGO shall not be eligible for financial assistance.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    }
+  ],
+  "unmapped_conditions": [
+    {
+      "text": "Applicant may be a destitute woman",
+      "quote": "The applicant should be a widow/destitute woman",
+      "page": 1,
+      "reason": "'destitute' is not defined."
+    }
+  ],
+  "documents_required": [],
+  "source_doc_ids": [],
+  "extractor": "gold",
+  "_status": "DRAFT gold labelled by Claude (not by the model under test) from the source text on 2026-10-11. Ipshita must verify every condition against the source and then delete this _status line.",
+  "_labelling_note": "Applicant is a widow OR a legal guardian (ANY group); 'destitute woman' left unmapped. Guardian case also covers 'continued absence from home of a parent'."
+}

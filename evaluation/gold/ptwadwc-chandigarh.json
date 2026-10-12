@@ -1,0 +1,115 @@
+{
+  "schema_version": "0.1",
+  "scheme_id": "ptwadwc-chandigarh",
+  "scheme_name": "Pension to Widows and Destitute Women, Chandigarh",
+  "department": "Social Welfare, Women & Child Development, Chandigarh Administration",
+  "jurisdiction": "Chandigarh (UT)",
+  "benefit_summary": "Rs. 1,000 per month",
+  "groups": [
+    {
+      "id": "root",
+      "logic": "ALL",
+      "parent": null
+    }
+  ],
+  "conditions": [
+    {
+      "id": "g1",
+      "group": "root",
+      "field": "gender",
+      "op": "==",
+      "value": "female",
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant women's age should be 18-60 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g2",
+      "group": "root",
+      "field": "age_years",
+      "op": ">=",
+      "value": 18.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant women's age should be 18-60 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g3",
+      "group": "root",
+      "field": "age_years",
+      "op": "<=",
+      "value": 60.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant women's age should be 18-60 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g4",
+      "group": "root",
+      "field": "residence_years_in_jurisdiction",
+      "op": ">",
+      "value": 3.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant should be a resident of UT, Chandigarh for more than 3 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g5",
+      "group": "root",
+      "field": "family_annual_income_inr",
+      "op": "<=",
+      "value": 150000.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant's family's annual income should not exceed Rs. 1,50,000/-",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    }
+  ],
+  "unmapped_conditions": [
+    {
+      "text": "Applicant must be a widow or a destitute woman",
+      "quote": "Pension Amount To Widows And Destitute Women",
+      "page": 1,
+      "reason": "Only implied by the scheme name/benefit; 'destitute' is not defined, so it cannot be computed."
+    }
+  ],
+  "documents_required": [],
+  "source_doc_ids": [],
+  "extractor": "gold",
+  "_status": "DRAFT gold labelled by Claude (not by the model under test) from the source text on 2026-10-11. Ipshita must verify every condition against the source and then delete this _status line.",
+  "_labelling_note": "'18-60 years' read as inclusive on both ends (judgement call; ambiguous). Widow/destitute status is implied by the title, not listed under Eligibility."
+}

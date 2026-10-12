@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.1",
+  "scheme_id": "disabled-pension-chandigarh",
+  "scheme_name": "Pension to the Disabled Person, Chandigarh",
+  "department": "Social Welfare, Women & Child Development, Chandigarh Administration",
+  "jurisdiction": "Chandigarh (UT)",
+  "benefit_summary": "Rs. 1,000 per annum (40-70% disability); Rs. 2,000 per annum (>70%)",
+  "groups": [
+    {
+      "id": "root",
+      "logic": "ALL",
+      "parent": null
+    }
+  ],
+  "conditions": [
+    {
+      "id": "g1",
+      "group": "root",
+      "field": "disability_percent",
+      "op": ">=",
+      "value": 40.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant's disability must be to the extent of 40% or above then they will be eligible to avail the benefit of same.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g2",
+      "group": "root",
+      "field": "residence_years_in_jurisdiction",
+      "op": ">",
+      "value": 3.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The applicant must be a resident of UT Chandigarh for more than 3 years.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g3",
+      "group": "root",
+      "field": "family_annual_income_inr",
+      "op": "<=",
+      "value": 150000.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The family income of the applicant should not exceed Rs. 1.50 lacs annually.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    }
+  ],
+  "unmapped_conditions": [],
+  "documents_required": [],
+  "source_doc_ids": [],
+  "extractor": "gold",
+  "_status": "DRAFT gold labelled by Claude (not by the model under test) from the source text on 2026-10-11. Ipshita must verify every condition against the source and then delete this _status line.",
+  "_labelling_note": "Exclusions restate the same three conditions. 'per annum' benefit amounts look unusual vs other pensions (per month) - check the official notification."
+}

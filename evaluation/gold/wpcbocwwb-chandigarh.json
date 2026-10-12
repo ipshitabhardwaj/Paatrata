@@ -1,0 +1,115 @@
+{
+  "schema_version": "0.1",
+  "scheme_id": "wpcbocwwb-chandigarh",
+  "scheme_name": "Widow Pension (CBOCWWB), Chandigarh",
+  "department": "Labour Department, Chandigarh (CBOCWWB)",
+  "jurisdiction": "Chandigarh (UT)",
+  "benefit_summary": "Rs. 1,000 per month",
+  "groups": [
+    {
+      "id": "root",
+      "logic": "ALL",
+      "parent": null
+    }
+  ],
+  "conditions": [
+    {
+      "id": "g1",
+      "group": "root",
+      "field": "marital_status",
+      "op": "==",
+      "value": "widowed",
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "to the widow of a male registered construction worker of the Board.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g2",
+      "group": "root",
+      "field": "board_membership_months",
+      "op": ">=",
+      "value": 6.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The deceased worker must have been a member of the Board for at least the last six months.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g3",
+      "group": "root",
+      "field": "months_since_spouse_death",
+      "op": "<=",
+      "value": 12.0,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The widow must apply within one year of the worker's death.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g4",
+      "group": "root",
+      "field": "receives_other_pension",
+      "op": "==",
+      "value": false,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "she does not receive pension from any other source.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    },
+    {
+      "id": "g5",
+      "group": "root",
+      "field": "covered_under_epf",
+      "op": "==",
+      "value": false,
+      "citation": {
+        "doc_id": null,
+        "page": 1,
+        "quote": "The financial assistance will not be given to those beneficiaries who are covered under EPF.",
+        "verified": false,
+        "match_score": 0.0
+      },
+      "confidence": 1.0,
+      "ambiguity": null,
+      "ambiguity_resolution": null
+    }
+  ],
+  "unmapped_conditions": [
+    {
+      "text": "Spouse was a registered construction worker of the Board",
+      "quote": "widow of a male registered construction worker of the Board",
+      "page": 1,
+      "reason": "Board registration of the deceased is not a profile field."
+    }
+  ],
+  "documents_required": [],
+  "source_doc_ids": [],
+  "extractor": "gold",
+  "_status": "DRAFT gold labelled by Claude (not by the model under test) from the source text on 2026-10-11. Ipshita must verify every condition against the source and then delete this _status line.",
+  "_labelling_note": "Source is partly paraphrased (see file). 'within one year' encoded as <= 12 months."
+}

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paatrata-core"
+version = "0.1.0"
+description = "Compile Indian welfare-scheme documents into cited, tested, deterministic eligibility rules (Gemini / Gemma)."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.6",
+  "rapidfuzz>=3.0",
+  "pdfplumber>=0.11",
+  "google-genai>=1.0",
+  "requests>=2.31",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
+eval = ["scikit-learn>=1.4"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+paatrata = "paatrata_core.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["core", "."]
