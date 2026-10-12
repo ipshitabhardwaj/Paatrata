@@ -1,7 +1,7 @@
 # Build the UI, then serve API + UI from one container (port 8000).
 FROM node:20-slim AS web
 WORKDIR /web
-COPY web/package.json ./
+COPY web/package.json web/package-lock.json* ./
 RUN npm install
 COPY web/ ./
 RUN npm run build

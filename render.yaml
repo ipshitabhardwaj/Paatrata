@@ -1,0 +1,18 @@
+# Render Blueprint: one Docker web service that serves the React UI and the FastAPI API.
+# Render dashboard -> New -> Blueprint -> pick this repo. Then set GEMINI_API_KEY when prompted.
+services:
+  - type: web
+    name: paatrata
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false            # you paste it in the dashboard; never committed
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: GEMMA_MODEL
+        value: gemma-4-31b-it
+      - key: ADMIN_TOKEN
+        generateValue: true    # Render creates a random officer token; copy it from the dashboard

@@ -7,3 +7,5 @@ data/
 web/node_modules/
 web/dist/
 .DS_Store
+# scratch outputs from `paatrata compile -o ...` in the repo root
+/*.json
