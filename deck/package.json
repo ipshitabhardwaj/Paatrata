@@ -1,0 +1,7 @@
+{
+  "name": "paatrata-deck",
+  "private": true,
+  "description": "Builds Paatrata.pptx in the app's visual style",
+  "scripts": { "build": "node build.js" },
+  "dependencies": { "pptxgenjs": "^4.0.1" }
+}
