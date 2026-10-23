@@ -628,38 +628,105 @@ class ChatRequest(BaseModel):
     message: str
 
 
+def _regex_extract(msg: str) -> dict:
+    """Best-effort field extraction from natural language without an LLM."""
+    import re
+    fields: dict[str, Any] = {}
+    low = msg.lower()
+
+    # Age
+    m = re.search(r'(?:age|umar|umr|aged?)\s*(?:is|hai|h|:)?\s*(\d{1,3})', low) or re.search(r'(\d{1,3})\s*(?:years?\s*old|saal|sal\b)', low)
+    if m: fields["age_years"] = int(m.group(1))
+
+    # Gender
+    if re.search(r'\b(female|woman|lady|mahila|aurat|istri)\b', low): fields["gender"] = "female"
+    elif re.search(r'\b(male|man|aadmi|purush)\b', low): fields["gender"] = "male"
+
+    # Income
+    m = re.search(r'(?:income|kamai|aay|amdani|salary)\s*(?:is|hai|h|:)?\s*(?:rs\.?|₹)?\s*([\d,]+(?:\.\d+)?)\s*(?:lakh|lac|lacs)?', low)
+    if m:
+        val = float(m.group(1).replace(",", ""))
+        if "lakh" in low or "lac" in low: val *= 100000
+        fields["family_annual_income_inr"] = val
+    else:
+        m = re.search(r'([\d.]+)\s*(?:lakh|lac)', low)
+        if m: fields["family_annual_income_inr"] = float(m.group(1)) * 100000
+
+    # Domicile / Chandigarh
+    if re.search(r'chandigarh', low): fields["is_domicile_of_jurisdiction"] = True
+    m = re.search(r'(\d+)\s*(?:years?|saal|sal)\s*(?:in\s*chandigarh|chandigarh\s*(?:me|mein|mai))', low)
+    if m: fields["residence_years_in_jurisdiction"] = int(m.group(1))
+
+    # BPL
+    if re.search(r'\bbpl\b|below\s*poverty|garib', low): fields["is_bpl"] = True
+
+    # Caste
+    for cat in ["sc", "st", "obc", "bc", "general"]:
+        if re.search(rf'\b{cat}\b', low): fields["caste_category"] = cat; break
+
+    # Disabled
+    if re.search(r'disab|viklang|apang|divyang', low): fields["is_disabled"] = True
+    m = re.search(r'(\d+)\s*%\s*(?:disab|viklang)?', low)
+    if m: fields["disability_percentage"] = int(m.group(1)); fields["is_disabled"] = True
+
+    # Marital status
+    if re.search(r'widow|vidhwa', low): fields["marital_status"] = "widowed"
+    elif re.search(r'unmarried|single|kunwara|kunwari', low): fields["marital_status"] = "unmarried"
+    elif re.search(r'married|shaadi|vivahit', low): fields["marital_status"] = "married"
+    elif re.search(r'divorced|talaq', low): fields["marital_status"] = "divorced"
+
+    # Construction worker
+    if re.search(r'construction\s*worker|nirman\s*shramik|mazdoor', low): fields["is_construction_worker"] = True
+    if re.search(r'registered\s*(?:construction\s*)?worker|panjikrit', low): fields["is_registered_construction_worker"] = True
+
+    # Children
+    m = re.search(r'(\d+)\s*(?:children|kids|bachch|bacch)', low)
+    if m: fields["children_count"] = int(m.group(1))
+
+    # Pregnant / lactating
+    if re.search(r'pregnant|garbhvati|garbhwati', low): fields["is_pregnant"] = True
+    if re.search(r'lactating|breastfeed|stanpan|dudh', low): fields["is_lactating"] = True
+
+    return fields
+
+
 @app.post("/api/chat")
 def chat(req: ChatRequest):
     """Conversational eligibility check: extract fields from natural language, run deterministic eval."""
     import google.genai as genai
 
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise HTTPException(503, "Chatbot requires GEMINI_API_KEY to be set.")
+    fields = None
+    _demo = os.environ.get("DEMO_MODE") or not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
 
-    client = genai.Client(api_key=api_key)
+    if not _demo:
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        client = genai.Client(api_key=api_key)
+        # Step 1: Extract structured fields from conversational input via Gemini
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[
+                    {"role": "user", "parts": [{"text": CHAT_SYSTEM + "\n\nUser message: " + req.message}]}
+                ],
+            )
+            raw = response.text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            extracted = json.loads(raw.strip())
+            fields = extracted.get("fields", extracted)
+        except Exception as e:
+            with db.connect() as con:
+                db.log_call(con, "chat-extract", {"error": str(e), "input": req.message[:200]})
+            # Fall through to regex fallback
 
-    # Step 1: Extract structured fields from conversational input
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[
-                {"role": "user", "parts": [{"text": CHAT_SYSTEM + "\n\nUser message: " + req.message}]}
-            ],
-        )
-        raw = response.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        extracted = json.loads(raw.strip())
-        fields = extracted.get("fields", extracted)
-    except Exception as e:
-        with db.connect() as con:
-            db.log_call(con, "chat-extract", {"error": str(e), "input": req.message[:200]})
-        raise HTTPException(502, f"Could not understand message: {e}")
+    if fields is None:
+        fields = _regex_extract(req.message)
+        if not fields:
+            raise HTTPException(400, "Could not understand your message. Please mention your age, income, location, etc.")
 
     with db.connect() as con:
         db.log_call(con, "chat-extract", {"input": req.message[:200], "fields": fields})
