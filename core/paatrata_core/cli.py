@@ -98,7 +98,7 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("compile", help="extract + validate rules from a source document")
     c.add_argument("source")
-    c.add_argument("--backend", default="gemini", help="gemini | gemma-studio | ollama | cache:<backend>:<model>")
+    c.add_argument("--backend", default="gemini", help="gemini | groq | gemma-studio | ollama | cache:<backend>:<model>")
     c.add_argument("--model", default=None)
     c.add_argument("--scheme-id", default=None)
     c.add_argument("-o", "--output", default=None)

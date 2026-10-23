@@ -31,7 +31,7 @@ export default function Hero({ onGo, health }) {
               Compile a scheme
             </button>
           </div>
-          <p className="powered">Reads documents with Gemini and Gemma 4. Decides with plain, auditable code.</p>
+          <p className="powered">Reads documents with Gemini, Groq, and Gemma 4. Decides with plain, auditable code.</p>
         </div>
         <LiveCheck />
       </div>
@@ -68,7 +68,7 @@ export function ClauseToVerdict() {
           </div>
         </li>
         <li className="step s2">
-          <span className="step-name">Gemini compiles a rule, quote checked</span>
+          <span className="step-name">Gemini / Groq compiles a rule, quote checked</span>
           <div className="rulecard">
             <code>family_annual_income_inr ≤ 150000</code>
             <span className="cite">quote found in source, page 1</span>

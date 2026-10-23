@@ -287,13 +287,14 @@ code { font-size: 13px; background: #ebe8e1; padding: 1px 5px; border-radius: 2p
 @media (max-width: 560px) { .rb-grid { grid-template-columns: 1fr; } }
 
 /* ------------------------------------------------------------------ AI roles + evidence */
-.roles-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.roles-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
 .role { background: var(--slab); padding: 20px 20px 18px; border-top: 6px solid var(--c-cobalt); }
 .role.code { border-top-color: var(--ink); background: var(--ink); color: #eceae6; }
 .role h3 { margin: 0 0 8px; font-size: 18px; font-stretch: 106%; color: inherit; }
 .role p { margin: 0; font-size: 14.5px; line-height: 1.55; }
 .role.code p { color: #d4d1cb; }
-@media (max-width: 1000px) { .roles-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 1200px) { .roles-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 800px) { .roles-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .roles-grid { grid-template-columns: 1fr; } }
 .evidence { margin-top: 22px; background: var(--slab); padding: 20px 22px; border-left: 8px solid var(--c-green); }
 .evidence h3 { margin-top: 0; }

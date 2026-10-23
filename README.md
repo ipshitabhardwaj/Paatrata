@@ -6,7 +6,7 @@ approves, then answers every applicant the same way, with the sentence of the no
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
-![Gemini](https://img.shields.io/badge/Google%20AI-Gemini%20%2B%20Gemma%204-4285F4)
+![AI Models](https://img.shields.io/badge/AI%20Models-Gemini%20%7C%20Groq%20%7C%20Gemma%204-4285F4)
 
 **Live demo:** https://paatrata.onrender.com (free tier: the first visit after a quiet spell takes about 30 seconds to wake up)
 
@@ -24,7 +24,7 @@ See **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** for the problem statement and
 1. [The problem](#the-problem)
 2. [The idea: compile once, decide with code](#the-idea-compile-once-decide-with-code)
 3. [How it works](#how-it-works)
-4. [Where Google AI does the work](#where-google-ai-does-the-work)
+4. [Where AI does the work](#where-ai-does-the-work)
 5. [Quickstart](#quickstart)
 6. [Using the app](#using-the-app)
 7. [Command line](#command-line)
@@ -86,8 +86,10 @@ flowchart LR
   A[Scheme notification<br/>PDF or text] --> B[Ingest<br/>page-numbered text]
   B --> C{Extractor}
   C -->|default| G[Gemini<br/>structured output]
+  C -->|ultra-fast LPU| Q[Groq<br/>Llama 3.1]
   C -->|open weights| H[Gemma 4<br/>AI Studio or Ollama]
   G --> V[Validator<br/>vocabulary · units · quote-in-source]
+  Q --> V
   H --> V
   V --> RV[Gemini review<br/>missing · misread · ambiguous]
   RV --> F[Officer review<br/>answer questions · boundary tests]
@@ -100,7 +102,7 @@ flowchart LR
 **1. Ingest.** The document is split into page-numbered text (`pdfplumber`). Scanned PDFs with no text layer are sent
 to Gemini as PDF instead, and flagged because their quotes cannot be verified locally.
 
-**2. Extract.** Gemini is called with a fixed JSON schema (Pydantic → structured output). For every eligibility
+**2. Extract.** Gemini or Groq (Llama 3.1) is called with a fixed JSON schema (Pydantic → structured output). For every eligibility
 condition it must return: a field from a controlled vocabulary, an operator, the value as written, a normalised value,
 a **verbatim quote**, the page, a confidence, and, when the wording is unclear, **one question for the officer**.
 The prompt includes an explicit ambiguity checklist (undefined terms, unclear range ends, missing reference dates,
@@ -139,13 +141,15 @@ condition carries its clause. The same details always produce the same answer.
 explanations are written by Gemini from the structured result; the model must echo the verdict code, and if it does
 not match, the English template is shown instead.
 
-## Where Google AI does the work
+## Where AI does the work
 
 | Step | Model | What it does | What it never does |
 |---|---|---|---|
-| Extraction | **Gemini** (structured output) | Maps prose to typed conditions with quotes, pages, confidence and officer questions | Decide eligibility |
+| Extraction (default) | **Gemini** (structured output) | Maps prose to typed conditions with quotes, pages, confidence and officer questions; multimodal parsing for scanned circulars | Decide eligibility |
+| Extraction (high-speed) | **Groq (Llama 3.1)** | Ultra-fast rule compilation on Groq LPUs; sub-second structured extraction on free tier | Decide eligibility |
+| Extraction (on-premise) | **Gemma 4** (open weights, Apache-2.0) via AI Studio or Ollama | Same compiler for departments that cannot send documents out | Decide eligibility |
 | Review | **Gemini** | Finds missing, misread and ambiguous conditions, each with a quote | Change a rule on its own |
-| Extraction, on-premise | **Gemma 4** (open weights, Apache-2.0) via AI Studio or Ollama | Same compiler for departments that cannot send documents out | Decide eligibility |
+| Chat query extraction | **Gemini / Groq fallback** | Real-time extraction of citizen profile fields from conversational queries | Guess rules |
 | Explanation | **Gemini** | Rewrites a deterministic result in Hindi or Punjabi | Alter the verdict (checked) |
 | Eligibility decision | **None.** Plain Python | Evaluates approved rules | Guess |
 
@@ -158,8 +162,8 @@ evaluations can be re-run offline and for free, and the demo never depends on ne
 
 - **Python 3.11 or newer.** Python 3.10.0 is not supported: current `pydantic` and `google-genai` fail to import on it.
 - **Node.js 18+** for the web UI.
-- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey) (free tier is enough for the demo).
-  Without a key, everything except live compiling still works.
+- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey) and/or a **Groq API key** from [Groq Console](https://console.groq.com) (free tiers are enough for the demo).
+  Without a key, everything except live compiling still works (cached rules and deterministic checks run offline).
 
 ### Windows (Command Prompt)
 
@@ -173,10 +177,10 @@ python -m pip install --upgrade pip
 pip install -e ".[server,eval,dev]"
 
 copy .env.example .env
-REM paste your GEMINI_API_KEY
+REM paste your GEMINI_API_KEY and/or GROQ_API_KEY
 notepad .env
 
-REM 60 tests, no API key needed
+REM 67 tests, no API key needed
 pytest -q
 ```
 
@@ -239,7 +243,7 @@ FastAPI then serves the built UI and the API together at http://localhost:8000.
 - **How one clause becomes an answer**: a four-step walkthrough of one real clause.
 - **Built for Chandigarh first**: photographs, each credited.
 - **The rulebook**: one tile per approved scheme with its real condition counts; click to open it in the checker.
-- **Where AI does the work**: the role of each model, plus measured results once the evaluation has been run.
+- **Where AI does the work**: the role of each model (Gemini, Groq, Gemma 4, deterministic code), plus measured results once the evaluation has been run.
 
 ### Check eligibility (applicants, Sampark operators)
 
@@ -251,7 +255,7 @@ FastAPI then serves the built UI and the API together at http://localhost:8000.
 
 ### Compile and review (scheme officers)
 
-1. Upload a PDF or text file, or paste official text. Choose **Gemini**, **Gemma 4 (AI Studio)** or
+1. Upload a PDF or text file, or paste official text. Choose **Gemini**, **Groq (Llama 3.1)**, **Gemma 4 (AI Studio)** or
    **Gemma 4 (local)**; keep *second-pass review* on. The scheme id is filled from `samples/sources/sources.csv`
    when the file is listed there.
 2. The draft shows each condition beside the source, with its quote highlighted; click a condition to jump to it.
@@ -275,6 +279,7 @@ REM extract + validate + review; scheme id comes from sources.csv
 paatrata compile samples\sources\ptwadwc_chandigarh.txt --backend gemini -o ptwadwc.json
 
 REM other backends
+paatrata compile samples\sources\oapc_chandigarh.txt --backend groq
 paatrata compile samples\sources\oapc_chandigarh.txt --backend gemma-studio
 paatrata compile samples\sources\oapc_chandigarh.txt --backend ollama --model gemma4:e2b
 REM replay only
@@ -297,8 +302,8 @@ from paatrata_core import load_file, get_extractor, compile_draft, evaluate, gen
 from paatrata_core.review import review_and_apply
 
 doc = load_file("samples/sources/oapc_chandigarh.txt")
-res = get_extractor("gemini").extract(doc)            # or "gemma-studio", "ollama"
-rules, issues = compile_draft(res.draft, doc, extractor="gemini", scheme_id="oapc-chandigarh")
+res = get_extractor("groq").extract(doc)              # or "gemini", "gemma-studio", "ollama"
+rules, issues = compile_draft(res.draft, doc, extractor="groq", scheme_id="oapc-chandigarh")
 more, _ = review_and_apply(rules, doc)                # optional second pass
 
 verdict = evaluate(rules, {"age_years": 64, "family_annual_income_inr": 162000,
@@ -325,7 +330,7 @@ All endpoints are under `/api`; interactive docs at `/docs`. Officer-only endpoi
 
 | Method | Path | Purpose | Officer |
 |---|---|---|---|
-| GET | `/health` | Status, available backends, whether a Gemini key is set | |
+| GET | `/health` | Status, available backends, whether Gemini / Groq keys are set | |
 | GET | `/vocabulary` | Computable fields, types, units, options | |
 | POST | `/compile` | Upload file or text → extract, validate, review → new draft version | ✓ |
 | GET | `/schemes` | Schemes with latest and approved version numbers | |
@@ -347,8 +352,8 @@ All endpoints are under `/api`; interactive docs at `/docs`. Officer-only endpoi
 ```bat
 REM Gemini, fills the cache
 python -m evaluation.run_eval --live --review
-REM add Gemma 4
-python -m evaluation.run_eval --live --backends gemini,gemma-studio
+REM add Groq and Gemma 4
+python -m evaluation.run_eval --live --backends gemini,groq,gemma-studio
 REM replay cache, no key needed
 python -m evaluation.run_eval
 REM one scheme, no baseline
@@ -450,7 +455,7 @@ paatrata/
 │   ├── explain.py             template explanation; verdict-checked translation
 │   ├── registry.py            scheme ids and provenance from sources.csv
 │   ├── cli.py                 `paatrata` command
-│   └── extractors/            gemini.py · gemma.py (AI Studio, Ollama) · prompts.py · base.py (cache, retries)
+│   └── extractors/            gemini.py · groq.py · gemma.py (AI Studio, Ollama) · prompts.py · base.py (cache, retries)
 ├── server/                    FastAPI app, SQLite storage, answer-key seeding
 ├── web/                       React (Vite) UI, original illustration, self-hosted fonts
 │   └── scripts/get_photos.py  credited photographs from Wikimedia Commons
@@ -466,8 +471,10 @@ Copy `.env.example` to `.env`.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `GEMINI_API_KEY` | none | Needed only for live Gemini / Gemma calls |
+| `GEMINI_API_KEY` | none | Needed only for live Gemini / AI Studio Gemma calls |
 | `GEMINI_MODEL` | `gemini-flash-latest` | Exact Gemini model id from AI Studio |
+| `GROQ_API_KEY` | none | Needed for live Groq (Llama 3.1) extraction & chat fallback |
+| `GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model tag (from console.groq.com) |
 | `GEMMA_MODEL` | `gemma-4-31b-it` | Gemma model id on AI Studio (check the current name) |
 | `OLLAMA_HOST` | `http://localhost:11434` | Local Ollama server |
 | `OLLAMA_MODEL` | `gemma4:e2b` | Tag from `ollama list`; E2B suits a 4 GB GPU |
@@ -482,7 +489,7 @@ Copy `.env.example` to `.env`.
 pytest -q
 ```
 
-60 tests, all offline: number parsing, three-valued logic, nested ANY/ALL rules, validator rejections, contradiction
+67 tests, all offline: number parsing, three-valued logic, nested ANY/ALL rules, validator rejections, contradiction
 detection, boundary-test generation, extractor caching, reviewer grounding, friendly API errors, the full
 compile → resolve → approve → check flow through the API, the evaluation pipeline, and every answer-key file (each
 quote must be found in its source and each key must be satisfiable).
@@ -493,7 +500,7 @@ quote must be found in its source and each key must be satisfiable).
 
 ```bash
 docker build -t paatrata .
-docker run -p 8000:8000 -e GEMINI_API_KEY=... -e ADMIN_TOKEN=... paatrata
+docker run -p 8000:8000 -e GEMINI_API_KEY=... -e GROQ_API_KEY=... -e ADMIN_TOKEN=... paatrata
 ```
 
 **Render (free, no card):** the repo includes `render.yaml`. In the Render dashboard choose
@@ -547,7 +554,9 @@ Space**. Run `web/scripts/get_photos.py` before building if you want the photogr
 | `npm error Missing script: "dev"` | Run npm inside the `web` folder. |
 | `Activate.ps1` does nothing | You are in Command Prompt; use `activate.bat`. |
 | "Gemini rejected the API key" | Check `GEMINI_API_KEY` in `.env` (no quotes or spaces) and restart the server. |
-| "Model ... was not found" | Set `GEMINI_MODEL` / `GEMMA_MODEL` to a name listed in AI Studio. |
+| "GROQ_API_KEY is not set" | Set `GROQ_API_KEY` in `.env` (get a free key at https://console.groq.com) and restart the server. |
+| "Groq/Llama backends need a text layer" | The uploaded PDF is a scanned image without a text layer; choose **Gemini** to use multimodal extraction. |
+| "Model ... was not found" | Set `GEMINI_MODEL`, `GROQ_MODEL`, or `GEMMA_MODEL` to a valid model name. |
 | "Rate limit / free-tier quota reached" | Wait a minute; cached results keep working. |
 | Live checker says "Start the API" | Run `uvicorn server.app:app --reload` from the repo root with the venv active. |
 | New answer-key schemes don't show | Restart the API; it adds any answer keys not yet in the database. |

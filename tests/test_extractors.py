@@ -49,3 +49,11 @@ def test_gemini_without_key_fails_clearly(monkeypatch, tmp_path):
     doc = load_file(ROOT / "samples/sources/oapc_chandigarh.txt")
     with pytest.raises(ExtractionError, match="GEMINI_API_KEY"):
         get_extractor("gemini", cache_dir=tmp_path).extract(doc)
+
+
+def test_groq_without_key_fails_clearly(monkeypatch, tmp_path):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    doc = load_file(ROOT / "samples/sources/oapc_chandigarh.txt")
+    with pytest.raises(ExtractionError, match="GROQ_API_KEY"):
+        get_extractor("groq", cache_dir=tmp_path).extract(doc)
+

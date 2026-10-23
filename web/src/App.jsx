@@ -57,7 +57,7 @@ export default function App() {
             ))}
           </div>
           <div className="bench-meta">
-            {health?.ok && !health.gemini_key && <span className="warn-chip">No Gemini key set: compiling uses saved results only</span>}
+            {health?.ok && !health.gemini_key && !health.groq_key && <span className="warn-chip">No API key set: compiling uses saved results only</span>}
             {tab === "compile" && (
               <label className="token">
                 Officer token

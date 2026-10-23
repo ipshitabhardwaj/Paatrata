@@ -96,7 +96,8 @@ def health():
         n_approved = con.execute("SELECT COUNT(*) FROM rule_versions WHERE status='approved'").fetchone()[0]
     return {"ok": True, "backends": BACKENDS, "schemes": n_schemes,
             "approved_versions": n_approved,
-            "gemini_key": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))}
+            "gemini_key": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+            "groq_key": bool(os.environ.get("GROQ_API_KEY"))}
 
 
 @app.get("/api/vocabulary")
@@ -136,8 +137,8 @@ async def compile_scheme(
     path = UPLOAD_DIR / f"{doc.doc_id}{Path(name).suffix or '.txt'}"
     path.write_bytes(data)
 
-    # --- Fast-path: if DEMO_MODE or no API key, skip Gemini and save gold rules as a real draft ---
-    _demo = os.environ.get("DEMO_MODE") or not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+    # --- Fast-path: if DEMO_MODE explicitly set, skip Gemini and save gold rules as a real draft ---
+    _demo = os.environ.get("DEMO_MODE") == "1"
     if _demo and backend == "gemini":
         demo_gold = _gold(scheme_id) if scheme_id else None
         if demo_gold is None:

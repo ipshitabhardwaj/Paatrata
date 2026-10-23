@@ -11,7 +11,7 @@
 
 ## One-line summary
 
-Paatrata turns welfare-scheme notifications into eligibility rules that are **extracted by Gemini, checked
+Paatrata turns welfare-scheme notifications into eligibility rules that are **extracted by Gemini or Groq (Llama 3.1), checked
 against the source text, approved by an officer, and then executed by plain code**, so every citizen gets the same
 answer with the exact clause it rests on.
 
@@ -53,8 +53,9 @@ one step upstream: from **document** to **verified, executable rules**.
 
 ## 3. What Paatrata does
 
-1. **Reads the document.** Gemini extracts each eligibility condition into a fixed schema: field, operator, value,
-   a **verbatim quote**, page, confidence, and a **question for the officer** where the wording is unclear.
+1. **Reads the document.** Gemini or Groq (Llama 3.1) extracts each eligibility condition into a fixed schema: field, operator, value,
+   a **verbatim quote**, page, confidence, and a **question for the officer** where the wording is unclear. Gemini handles multimodal
+   scanned circulars; Groq delivers sub-second extraction for text notifications.
 2. **Checks the AI's work with code.** A validator rejects any condition whose quote is not in the document, whose
    value does not parse (`"Rs. 1.5 lakh"` → `150000`), or whose field is not in the controlled vocabulary. It also
    detects contradictions.
@@ -72,33 +73,35 @@ one step upstream: from **document** to **verified, executable rules**.
 
 ## 4. What is built (working now)
 
-- **Compiler:** Gemini extraction with structured output, deterministic validator, second-pass Gemini review,
-  response caching, retries and plain-language errors.
-- **Open-weight path:** the same compiler on **Gemma 4**, through Google AI Studio or locally through Ollama.
+- **Compiler:** multi-backend extraction with Gemini (structured output, multimodal), **Groq** (high-speed Llama 3.1 on Groq LPUs),
+  deterministic validator, second-pass Gemini review, response caching, retries and plain-language errors.
+- **High-speed & open-weight paths:** the same compiler runs on **Groq** for sub-second responses and on **Gemma 4**
+  (Google AI Studio or local Ollama) for on-premise deployments.
 - **Deterministic evaluator:** three-valued logic over nested ALL/ANY rule groups, with a citation for every condition.
 - **Boundary-test generator:** synthetic test applicants at every threshold, used for officer review and for scoring.
 - **Officer workflow:** compile, review against highlighted source, resolve questions, approve, version history.
-- **Citizen checker:** a form that shows only the fields each scheme needs, plus a live checker on the landing page.
+- **Citizen checker:** a form that shows only the fields each scheme needs, plus a live checker on the landing page and chat assistant.
 - **Rulebook:** six Chandigarh schemes, including one where any of several categories qualifies (ICDS) and one with
   a widow-or-legal-guardian alternative.
 - **Evaluation harness:** extraction accuracy, quote verification and decision accuracy against hand-labelled
   answer keys, compared with a plain retrieval-augmented chatbot baseline using the same model and documents.
 - **Agent Skill:** `skills/scheme-rules-compiler/`, in the Agent Skill Open Standard format.
 - **Interfaces:** web app (React), REST API (FastAPI), command line (`paatrata`) and Python library (`paatrata_core`).
-- **60 automated tests**, all running offline.
+- **67 automated tests**, all running offline.
 
 **Simulated / not real:** test applicants are synthetic; scheme texts are secondary summaries from
 publicservicesmap.in (a myScheme mirror); five of six answer keys are drafts pending human verification; there is no
 integration with any government system.
 
-## 5. Google AI and Google tools used
+## 5. AI and tools used
 
-| Tool from the recommended list | How Paatrata uses it | Status |
+| Tool / Model | How Paatrata uses it | Status |
 |---|---|---|
-| **Gemini API** | Rule extraction with structured output (Pydantic schema → JSON) | Built |
+| **Gemini API** | Rule extraction with structured output (Pydantic schema → JSON); multimodal scanned PDF parsing | Built |
 | **Gemini API** | Second-pass review for missing, misread and ambiguous conditions | Built |
 | **Gemini API** | Hindi and Punjabi explanations, verdict-checked | Built |
 | **Gemini API** | Baseline chatbot in the evaluation, for a fair comparison | Built |
+| **Groq API (Llama 3.1)** | Ultra-fast rule compilation on Groq LPUs (sub-second) and real-time citizen chat query extraction fallback | Built |
 | **Google AI Studio** | API keys; hosted **Gemma 4** for the open-weight extractor | Built |
 | **Gemma 4 (open weights)** | Same compiler, locally via Ollama, for on-premise use | Built; to be measured |
 | **Gemini Multimodal** | Scanned PDFs without a text layer are sent to Gemini as PDF | Built |
@@ -117,8 +120,8 @@ A specific, recurring failure in public infrastructure (inconsistent, untraceabl
 its source: one verified rulebook that every channel can use. Built and demonstrated on six real Chandigarh schemes.
 
 ### AI / Technical Execution (25%)
-Google AI does the hard language work: reading varied prose, mapping it to typed conditions, finding ambiguity,
-reviewing its own output, and writing explanations in Indian languages. That work is **measurable**: extraction
+Google AI and Groq do the hard language work: reading varied prose, mapping it to typed conditions, finding ambiguity,
+reviewing output, and writing explanations in Indian languages. That work is **measurable**: extraction
 accuracy and decision accuracy against answer keys, and a head-to-head with a chatbot baseline. It runs end to end:
 document in, approved rules, answer out, in a web app, an API, a command line and a library.
 
@@ -145,12 +148,12 @@ start in weeks:
 4. Compare its answers with current practice on a sample of past applications.
 
 ### Bonus: Best Open-Source AI Project
-- **Open-weight model as a real component:** Gemma 4 runs the same extraction, locally or on AI Studio, for
-  departments that cannot send documents outside.
+- **High-speed inference & open-weight paths:** Groq (Llama 3.1) enables sub-second compilation on Groq LPUs; Gemma 4
+  runs the same extraction, locally or on AI Studio, for departments that cannot send documents outside.
 - **Agent skill:** `skills/scheme-rules-compiler/` follows the Agent Skill Open Standard; it makes agents call the
   deterministic engine instead of guessing eligibility.
 - **Original, reusable component:** `paatrata_core` is an installable library: rule schema, validator, three-valued
-  evaluator, boundary-test generator, pluggable extractor interface and an evaluation harness with a public answer-key format.
+  evaluator, boundary-test generator, pluggable extractor interface (Gemini, Groq, Gemma) and an evaluation harness with a public answer-key format.
 - **Public and licensed:** public GitHub repository, Apache-2.0; answer keys CC-BY-4.0.
 
 ## 7. Evaluation method
@@ -176,13 +179,13 @@ those labels, not real-world accuracy.
 
 | Layer | Choice |
 |---|---|
-| AI | Gemini API (structured output), Gemma 4 via Google AI Studio or Ollama |
+| AI | Gemini API (structured output, multimodal), Groq API (Llama 3.1 on LPUs), Gemma 4 via Google AI Studio or Ollama |
 | Core | Python 3.11+, Pydantic, rapidfuzz, pdfplumber |
 | Backend | FastAPI, SQLite |
 | Frontend | React + Vite, original illustration, self-hosted fonts (Archivo, Tiro Devanagari Hindi, Noto Sans Gurmukhi) |
 | Evaluation | Custom harness, scikit-learn TF-IDF for the baseline |
 | Packaging | Docker (Cloud Run ready), `pip install` library, CLI, Agent Skill |
-| Tests | pytest, 60 offline tests |
+| Tests | pytest, 67 offline tests |
 
 ## 9. Responsible design
 

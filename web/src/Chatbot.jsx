@@ -91,7 +91,7 @@ export default function Chatbot() {
         {
           role: "bot",
           content:
-            "Sorry, I couldn't process that. The server might be offline or missing its Gemini API key. Try again?",
+            "Sorry, I couldn't process that. The server might be offline or missing its API key (Gemini / Groq). Try again?",
         },
       ]);
     }

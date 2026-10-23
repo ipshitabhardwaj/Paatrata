@@ -2,7 +2,7 @@
 
     python -m evaluation.run_eval                     # replay cached model outputs only (no key needed)
     python -m evaluation.run_eval --live              # call models, fill the cache
-    python -m evaluation.run_eval --live --backends gemini,gemma-studio --rag-profiles 8 --rag-runs 3
+    python -m evaluation.run_eval --live --backends gemini,groq,gemma-studio --rag-profiles 8 --rag-runs 3
 
 Measures, per scheme with a gold file in evaluation/gold/ and a source in samples/sources/sources.csv:
 
@@ -37,6 +37,7 @@ from paatrata_core.extractors import get_extractor
 from paatrata_core.extractors.base import ExtractionError
 from paatrata_core.extractors.gemini import DEFAULT_GEMINI_MODEL
 from paatrata_core.extractors.gemma import DEFAULT_GEMMA_MODEL, DEFAULT_OLLAMA_MODEL
+from paatrata_core.extractors.groq import DEFAULT_GROQ_MODEL
 from paatrata_core.ingest import load_file
 from paatrata_core.schema import RuleSet
 from paatrata_core.testgen import generate_tests, random_profiles
@@ -46,7 +47,12 @@ ROOT = Path(__file__).resolve().parents[1]
 GOLD = ROOT / "evaluation" / "gold"
 SOURCES = ROOT / "samples" / "sources"
 OUT = ROOT / "evaluation" / "results"
-DEFAULT_MODELS = {"gemini": DEFAULT_GEMINI_MODEL, "gemma-studio": DEFAULT_GEMMA_MODEL, "ollama": DEFAULT_OLLAMA_MODEL}
+DEFAULT_MODELS = {
+    "gemini": DEFAULT_GEMINI_MODEL,
+    "groq": DEFAULT_GROQ_MODEL,
+    "gemma-studio": DEFAULT_GEMMA_MODEL,
+    "ollama": DEFAULT_OLLAMA_MODEL,
+}
 
 
 def _key(c) -> tuple:

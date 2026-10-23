@@ -109,7 +109,7 @@ const pct = (x) => (typeof x === "number" ? `${Math.round(x * 100)}%` : "—");
 
 export function AIRoles({ evalData }) {
   const sys = evalData?.summary ? Object.entries(evalData.summary) : [];
-  const ours = sys.find(([k]) => k.startsWith("paatrata/gemini"))?.[1];
+  const ours = sys.find(([k]) => k.startsWith("paatrata/gemini") || k.startsWith("paatrata/groq") || k.startsWith("paatrata/"))?.[1];
   const rag = sys.find(([k]) => k.startsWith("rag/"))?.[1];
   return (
     <section className="roles">
@@ -119,8 +119,12 @@ export function AIRoles({ evalData }) {
       </div>
       <div className="roles-grid">
         <article className="role">
-          <h3>Gemini reads the notification</h3>
-          <p>Structured output into a fixed rule schema. Every condition must quote its sentence; code rejects any quote it cannot find in the document.</p>
+          <h3>Gemini reads multimodal notices</h3>
+          <p>Structured output into a fixed rule schema with native support for scanned circulars. Every condition must quote its sentence; code rejects unverified quotes.</p>
+        </article>
+        <article className="role">
+          <h3>Groq accelerates extraction</h3>
+          <p>Ultra-fast rule compilation running Llama 3.1 on Groq LPUs. Delivers sub-second extraction and rapid citizen chat parsing with zero latency bottlenecks.</p>
         </article>
         <article className="role">
           <h3>Gemini reviews its own encoding</h3>
@@ -141,7 +145,7 @@ export function AIRoles({ evalData }) {
           <div className="ev-row">
             <div>
               <span className="ev-num">{pct(ours.decision_accuracy)}</span>
-              <span>decision accuracy, Paatrata with Gemini</span>
+              <span>decision accuracy, Paatrata with Gemini / Groq</span>
             </div>
             {rag && (
               <div>

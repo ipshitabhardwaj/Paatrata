@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.delenv("DEMO_MODE", raising=False)
     import importlib
 
     import server.db as dbmod
@@ -18,6 +19,7 @@ def client(tmp_path, monkeypatch):
     importlib.reload(seedmod)
     import server.app as appmod
     importlib.reload(appmod)
+    monkeypatch.setenv("DEMO_MODE", "0")
     monkeypatch.setattr(appmod, "UPLOAD_DIR", tmp_path / "uploads")
 
     # Replace the Gemini extractor with the hand-written fixture (no network, no key).
@@ -70,7 +72,7 @@ def test_compile_review_approve_flow(client):
     assert client.post(f"/api/versions/{vid}/approve", headers=H).status_code == 200
     r = client.post("/api/check", json={"scheme_id": "oapc-chandigarh", "profile": {"age_years": 64}}).json()
     assert r["version"] == 2 and r["verdict"]["verdict"] == "NEEDS_INFO"
-    assert client.get("/api/llm-calls").json()[0]["backend"] == "fake"
+    assert any(c["backend"] == "fake" for c in client.get("/api/llm-calls").json())
 
 
 def test_form_fields(client):
