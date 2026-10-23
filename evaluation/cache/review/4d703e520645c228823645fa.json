@@ -1,0 +1,15 @@
+{
+  "result": {
+    "findings": []
+  },
+  "meta": {
+    "backend": "gemini-review",
+    "model": "gemini-flash-latest",
+    "latency_ms": 166675,
+    "cache_hit": false,
+    "input_tokens": 637,
+    "output_tokens": 9,
+    "attempts": 1,
+    "error": null
+  }
+}

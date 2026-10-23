@@ -42,6 +42,7 @@ def connect(path: Path | None = None) -> Iterator[sqlite3.Connection]:
     p.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(p)
     con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL")
     try:
         yield con
         con.commit()

@@ -6,6 +6,7 @@ import PhotoBand, { usePhotos } from "./Photos.jsx";
 import Compile from "./Compile.jsx";
 import Check from "./Check.jsx";
 import Evaluation from "./Evaluation.jsx";
+import ChatWidget from "./ChatWidget.jsx";
 
 const TABS = [
   { id: "check", label: "Check eligibility", who: "For applicants and Sampark operators" },
@@ -87,6 +88,7 @@ export default function App() {
           {photos.length > 0 ? "; photographs are credited where they appear, under their own licences." : "."}
         </p>
       </footer>
+      <ChatWidget />
     </>
   );
 }

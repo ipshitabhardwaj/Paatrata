@@ -17,6 +17,7 @@ export default function Check({ initial }) {
   const [res, setRes] = useState(null);
   const [source, setSource] = useState(null);
   const [active, setActive] = useState(null);
+  const [allResults, setAllResults] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -120,6 +121,26 @@ export default function Check({ initial }) {
             </select>
           </label>
           <button disabled={!sid || busy}>{busy ? "Checking…" : "Check eligibility"}</button>
+          <button
+            type="button"
+            disabled={!Object.keys(profile).length || busy}
+            onClick={async () => {
+              setErr("");
+              setBusy(true);
+              try {
+                const r = await api.post("/check/all", profile);
+                setRes(null);
+                setAllResults(r);
+              } catch (e2) {
+                setErr(e2.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className="btn-all"
+          >
+            Check all schemes
+          </button>
           <p className="muted small">Leave a field empty to see how missing information is handled.</p>
         </form>
         {examples.length > 0 && (
@@ -196,6 +217,44 @@ export default function Check({ initial }) {
               </div>
             </div>
             <p className="muted small">{res.verdict.disclaimer}</p>
+          </div>
+        )}
+        {allResults && !res && (
+          <div className="all-results">
+            <h2>Results across {allResults.total_schemes} schemes</h2>
+            {allResults.eligible.length > 0 && (
+              <div className="card">
+                <h3 className="pass">✓ Eligible ({allResults.eligible.length})</h3>
+                {allResults.eligible.map(r => (
+                  <div key={r.scheme_id} className="all-row ok">
+                    <strong>{r.scheme_name}</strong>
+                    {r.benefit && <span className="muted small"> — {r.benefit}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {allResults.needs_info.length > 0 && (
+              <div className="card">
+                <h3 className="amb">? Needs more info ({allResults.needs_info.length})</h3>
+                {allResults.needs_info.map(r => (
+                  <div key={r.scheme_id} className="all-row amb">
+                    <strong>{r.scheme_name}</strong>
+                    <span className="muted small"> — missing: {r.missing_fields.join(", ")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {allResults.not_eligible.length > 0 && (
+              <div className="card">
+                <h3 className="fail">✗ Not eligible ({allResults.not_eligible.length})</h3>
+                {allResults.not_eligible.map(r => (
+                  <div key={r.scheme_id} className="all-row bad">
+                    <strong>{r.scheme_name}</strong>
+                    <span className="muted small"> — failed on: {r.failed_conditions.join(", ")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>

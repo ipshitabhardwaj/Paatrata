@@ -55,7 +55,11 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Paatrata", version="0.1.0", lifespan=lifespan,
               description="Compile scheme documents into cited, tested eligibility rules.")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_extra = os.environ.get("CORS_ORIGIN")
+if _extra:
+    _origins.extend(o.strip() for o in _extra.split(",") if o.strip())
+app.add_middleware(CORSMiddleware, allow_origins=_origins,
                    allow_methods=["*"], allow_headers=["*"])
 
 
@@ -87,7 +91,12 @@ def _gold(scheme_id: str) -> RuleSet | None:
 # --------------------------------------------------------------------------- meta
 @app.get("/api/health")
 def health():
-    return {"ok": True, "backends": BACKENDS, "gemini_key": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))}
+    with db.connect() as con:
+        n_schemes = con.execute("SELECT COUNT(*) FROM schemes").fetchone()[0]
+        n_approved = con.execute("SELECT COUNT(*) FROM rule_versions WHERE status='approved'").fetchone()[0]
+    return {"ok": True, "backends": BACKENDS, "schemes": n_schemes,
+            "approved_versions": n_approved,
+            "gemini_key": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))}
 
 
 @app.get("/api/vocabulary")
@@ -270,6 +279,12 @@ def version_tests(vid: int):
 
 
 # --------------------------------------------------------------------------- query path
+class BatchCheckRequest(BaseModel):
+    scheme_id: str
+    profiles: list[dict[str, Any]]
+    lang: str = "en"
+
+
 class CheckRequest(BaseModel):
     scheme_id: str
     profile: dict[str, Any]
@@ -357,6 +372,157 @@ def scheme_examples(scheme_id: str, limit: int = 8):
     return [{"description": t.description, "profile": t.profile, "expected": t.expected} for t in picked]
 
 
+# --------------------------------------------------------------------------- confidence / batch / diff / audit
+
+@app.get("/api/confidence/{scheme_id}")
+def confidence_report(scheme_id: str):
+    """Per-condition trust breakdown: quote match score, confidence, ambiguity status."""
+    with db.connect() as con:
+        v = db.row(con.execute(
+            "SELECT * FROM rule_versions WHERE scheme_id=? AND status='approved' ORDER BY version DESC LIMIT 1",
+            (scheme_id,)).fetchone())
+    if not v:
+        raise HTTPException(404, "No approved rules for this scheme.")
+    rules = v["rules"]
+    conditions = []
+    for c in rules["conditions"]:
+        conditions.append({
+            "id": c["id"],
+            "field": c["field"],
+            "op": c["op"],
+            "value": c["value"],
+            "confidence": c.get("confidence", 1.0),
+            "quote_verified": c["citation"].get("verified", False),
+            "quote_match_score": c["citation"].get("match_score"),
+            "has_ambiguity": bool(c.get("ambiguity")),
+            "ambiguity_resolved": bool(c.get("ambiguity_resolution")),
+            "quote_snippet": c["citation"]["quote"][:80] + ("…" if len(c["citation"]["quote"]) > 80 else ""),
+        })
+    avg_confidence = sum(c["confidence"] for c in conditions) / max(len(conditions), 1)
+    all_verified = all(c["quote_verified"] for c in conditions)
+    return {
+        "scheme_id": scheme_id,
+        "version": v["version"],
+        "overall_confidence": round(avg_confidence, 3),
+        "all_quotes_verified": all_verified,
+        "n_conditions": len(conditions),
+        "n_unmapped": len(rules.get("unmapped_conditions", [])),
+        "conditions": conditions,
+    }
+
+
+@app.post("/api/check/batch")
+def check_batch(req: BatchCheckRequest):
+    """Check multiple applicants against one scheme. Max 50 per call."""
+    if len(req.profiles) > 50:
+        raise HTTPException(400, "Maximum 50 profiles per batch.")
+    with db.connect() as con:
+        v = db.row(con.execute(
+            "SELECT * FROM rule_versions WHERE scheme_id=? AND status='approved' ORDER BY version DESC LIMIT 1",
+            (req.scheme_id,)).fetchone())
+        if not v:
+            raise HTTPException(404, "No approved rules for this scheme yet.")
+        rules = RuleSet.model_validate(v["rules"])
+        results = []
+        for i, profile in enumerate(req.profiles):
+            verdict = evaluate(rules, profile)
+            results.append({
+                "index": i,
+                "verdict": verdict.verdict,
+                "missing_fields": verdict.missing_fields,
+                "failed_conditions": verdict.failed_conditions,
+            })
+    summary = {
+        "total": len(results),
+        "eligible": sum(1 for r in results if r["verdict"] == "ELIGIBLE"),
+        "not_eligible": sum(1 for r in results if r["verdict"] == "NOT_ELIGIBLE"),
+        "needs_info": sum(1 for r in results if r["verdict"] == "NEEDS_INFO"),
+    }
+    return {"scheme_id": req.scheme_id, "version": v["version"], "summary": summary, "results": results}
+
+
+@app.post("/api/check/all")
+def check_all_schemes(profile: dict[str, Any]):
+    """Check one applicant against every approved scheme."""
+    with db.connect() as con:
+        rows = con.execute(
+            "SELECT rv.* FROM rule_versions rv "
+            "INNER JOIN (SELECT scheme_id, MAX(version) as mv FROM rule_versions WHERE status='approved' GROUP BY scheme_id) latest "
+            "ON rv.scheme_id = latest.scheme_id AND rv.version = latest.mv"
+        ).fetchall()
+        results = []
+        for row in rows:
+            v = db.row(row)
+            rules = RuleSet.model_validate(v["rules"])
+            verdict = evaluate(rules, profile)
+            results.append({
+                "scheme_id": rules.scheme_id,
+                "scheme_name": rules.scheme_name,
+                "benefit": rules.benefit_summary,
+                "verdict": verdict.verdict,
+                "missing_fields": verdict.missing_fields,
+                "failed_conditions": [r.field for r in verdict.results if r.outcome == "FALSE"],
+            })
+    return {
+        "eligible": [r for r in results if r["verdict"] == "ELIGIBLE"],
+        "not_eligible": [r for r in results if r["verdict"] == "NOT_ELIGIBLE"],
+        "needs_info": [r for r in results if r["verdict"] == "NEEDS_INFO"],
+        "total_schemes": len(results),
+    }
+
+
+@app.get("/api/versions/{vid1}/diff/{vid2}")
+def diff_versions(vid1: int, vid2: int):
+    """Compare two rule versions: added, removed, changed conditions."""
+    with db.connect() as con:
+        v1 = _version(con, vid1)
+        v2 = _version(con, vid2)
+    r1 = {c["id"]: c for c in v1["rules"]["conditions"]}
+    r2 = {c["id"]: c for c in v2["rules"]["conditions"]}
+    added = [c for cid, c in r2.items() if cid not in r1]
+    removed = [c for cid, c in r1.items() if cid not in r2]
+    changed = []
+    for cid in set(r1) & set(r2):
+        c1, c2 = r1[cid], r2[cid]
+        diffs = {}
+        for key in ("field", "op", "value"):
+            if c1.get(key) != c2.get(key):
+                diffs[key] = {"old": c1.get(key), "new": c2.get(key)}
+        if diffs:
+            changed.append({"id": cid, "changes": diffs})
+    return {
+        "version_a": {"id": vid1, "version": v1["version"], "extractor": v1["extractor"]},
+        "version_b": {"id": vid2, "version": v2["version"], "extractor": v2["extractor"]},
+        "added": added, "removed": removed, "changed": changed,
+        "conditions_a": len(r1), "conditions_b": len(r2),
+    }
+
+
+@app.get("/api/audit/{scheme_id}")
+def audit_trail(scheme_id: str):
+    """Full version history with approval metadata."""
+    with db.connect() as con:
+        s = con.execute("SELECT * FROM schemes WHERE id=?", (scheme_id,)).fetchone()
+        if not s:
+            raise HTTPException(404, "scheme not found")
+        versions = con.execute(
+            "SELECT id, version, status, extractor, created_at, approved_at, approved_by, source_doc_id "
+            "FROM rule_versions WHERE scheme_id=? ORDER BY version", (scheme_id,)).fetchall()
+    return {
+        "scheme_id": scheme_id,
+        "scheme_name": dict(s)["name"],
+        "history": [{
+            "version_id": dict(v)["id"],
+            "version": dict(v)["version"],
+            "status": dict(v)["status"],
+            "extractor": dict(v)["extractor"],
+            "compiled_at": dict(v)["created_at"],
+            "approved_at": dict(v)["approved_at"],
+            "approved_by": dict(v)["approved_by"],
+        } for v in versions],
+    }
+
+
 # --------------------------------------------------------------------------- eval + logs
 @app.get("/api/eval")
 def eval_results():
@@ -369,6 +535,142 @@ def eval_results():
 def llm_calls(limit: int = 50):
     with db.connect() as con:
         return [dict(r) for r in con.execute("SELECT * FROM llm_calls ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+
+# --------------------------------------------------------------------------- chatbot
+
+CHAT_SYSTEM = """You are an eligibility assistant for Chandigarh welfare schemes.
+The user will describe themselves in English, Hindi, Punjabi, or Hinglish.
+
+Extract these fields from their message (ONLY the ones they mention):
+- age_years (number)
+- gender (male/female/other)
+- marital_status (unmarried/married/widowed/divorced/separated)
+- family_annual_income_inr (number — convert lakhs: 1.5 lakh = 150000)
+- residence_years_in_jurisdiction (number)
+- is_domicile_of_jurisdiction (true if they say they live in/are from Chandigarh)
+- is_disabled (true/false)
+- disability_percentage (number 0-100)
+- is_bpl (true/false — below poverty line)
+- caste_category (general/sc/st/obc/bc)
+- is_construction_worker (true/false)
+- is_registered_construction_worker (true/false)
+- children_count (number)
+- youngest_child_age_months (number)
+- is_pregnant (true/false)
+- is_lactating (true/false)
+
+Return ONLY valid JSON, no markdown, no explanation:
+{"fields": {"age_years": 65, "family_annual_income_inr": 120000, ...}}
+
+Only include fields the user actually mentioned. Convert all values to the right type.
+"1.2 lakh" or "1,20,000" or "120000" all become 120000.
+If they say "Chandigarh mein rehta hoon" → is_domicile_of_jurisdiction: true.
+If they mention years in Chandigarh → residence_years_in_jurisdiction.
+"""
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+@app.post("/api/chat")
+def chat(req: ChatRequest):
+    """Conversational eligibility check: extract fields from natural language, run deterministic eval."""
+    import google.genai as genai
+
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        raise HTTPException(503, "Chatbot requires GEMINI_API_KEY to be set.")
+
+    client = genai.Client(api_key=api_key)
+
+    # Step 1: Extract structured fields from conversational input
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                {"role": "user", "parts": [{"text": CHAT_SYSTEM + "\n\nUser message: " + req.message}]}
+            ],
+        )
+        raw = response.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        extracted = json.loads(raw.strip())
+        fields = extracted.get("fields", extracted)
+    except Exception as e:
+        with db.connect() as con:
+            db.log_call(con, "chat-extract", {"error": str(e), "input": req.message[:200]})
+        raise HTTPException(502, f"Could not understand message: {e}")
+
+    with db.connect() as con:
+        db.log_call(con, "chat-extract", {"input": req.message[:200], "fields": fields})
+
+    # Step 2: Run deterministic evaluation against ALL approved schemes
+    with db.connect() as con:
+        rows = con.execute(
+            "SELECT rv.* FROM rule_versions rv "
+            "INNER JOIN (SELECT scheme_id, MAX(version) as mv FROM rule_versions WHERE status='approved' GROUP BY scheme_id) latest "
+            "ON rv.scheme_id = latest.scheme_id AND rv.version = latest.mv"
+        ).fetchall()
+
+        results = []
+        for row in rows:
+            v = db.row(row)
+            rules = RuleSet.model_validate(v["rules"])
+            verdict = evaluate(rules, fields)
+            citations = []
+            for r in verdict.results:
+                if r.citation:
+                    citations.append({
+                        "field": r.field,
+                        "quote": r.citation.quote,
+                        "page": r.citation.page,
+                    })
+            results.append({
+                "scheme_id": rules.scheme_id,
+                "scheme_name": rules.scheme_name,
+                "benefit": rules.benefit_summary,
+                "verdict": verdict.verdict,
+                "missing_fields": verdict.missing_fields,
+                "failed_conditions": [r.field for r in verdict.results if r.outcome == "FALSE"],
+                "citations": citations,
+            })
+
+    # Step 3: Build a conversational reply
+    eligible = [r for r in results if r["verdict"] == "ELIGIBLE"]
+    not_eligible = [r for r in results if r["verdict"] == "NOT_ELIGIBLE"]
+    needs_info = [r for r in results if r["verdict"] == "NEEDS_INFO"]
+
+    parts = []
+    if eligible:
+        names = ", ".join(r["scheme_name"] for r in eligible)
+        parts.append(f"Good news! Based on what you told me, you appear eligible for: {names}.")
+    if not_eligible:
+        names = ", ".join(r["scheme_name"] for r in not_eligible)
+        parts.append(f"You don't appear to meet the criteria for: {names}.")
+    if needs_info:
+        all_missing = set()
+        for r in needs_info:
+            all_missing.update(r["missing_fields"])
+        parts.append(
+            f"For {len(needs_info)} scheme(s), I need more information: {', '.join(sorted(all_missing))}. "
+            "Could you tell me about those?"
+        )
+    if not parts:
+        parts.append("I couldn't find any applicable schemes. Try telling me more about yourself.")
+
+    reply = " ".join(parts)
+
+    return {
+        "reply": reply,
+        "extracted_fields": fields,
+        "results": results,
+    }
 
 
 # --------------------------------------------------------------------------- UI

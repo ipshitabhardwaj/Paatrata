@@ -79,6 +79,64 @@ def test_form_fields(client):
                                            "residence_years_in_jurisdiction", "is_domicile_of_jurisdiction"}
 
 
+def test_check_all_schemes(client):
+    r = client.post("/api/check/all", json={"age_years": 64, "family_annual_income_inr": 120000,
+                                             "residence_years_in_jurisdiction": 5, "is_domicile_of_jurisdiction": True})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total_schemes"] >= 1
+    assert any(s["scheme_id"] == "oapc-chandigarh" for s in data["eligible"])
+
+
+def test_batch_check(client):
+    profiles = [
+        {"age_years": 64, "family_annual_income_inr": 120000, "residence_years_in_jurisdiction": 5, "is_domicile_of_jurisdiction": True},
+        {"age_years": 50, "family_annual_income_inr": 200000},
+    ]
+    r = client.post("/api/check/batch", json={"scheme_id": "oapc-chandigarh", "profiles": profiles})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["summary"]["total"] == 2
+    assert data["results"][0]["verdict"] == "ELIGIBLE"
+    assert data["results"][1]["verdict"] == "NOT_ELIGIBLE"
+
+
+def test_batch_check_limit(client):
+    profiles = [{"age_years": 60}] * 51
+    r = client.post("/api/check/batch", json={"scheme_id": "oapc-chandigarh", "profiles": profiles})
+    assert r.status_code == 400
+
+
+def test_confidence_report(client):
+    r = client.get("/api/confidence/oapc-chandigarh")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["n_conditions"] == 4
+    assert len(data["conditions"]) == 4
+    assert "overall_confidence" in data
+    assert "all_quotes_verified" in data
+
+
+def test_audit_trail(client):
+    r = client.get("/api/audit/oapc-chandigarh")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["history"]) >= 1
+    assert data["history"][0]["status"] == "approved"
+
+
+def test_diff_versions(client):
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "samples/sources/oapc_chandigarh.txt").read_bytes()
+    r = client.post("/api/compile", files={"file": ("oapc.txt", src)},
+                    data={"scheme_id": "oapc-chandigarh", "backend": "gemini"}, headers=H)
+    vid2 = r.json()["version_id"]
+    r = client.get(f"/api/versions/1/diff/{vid2}")
+    assert r.status_code == 200
+    data = r.json()
+    assert "added" in data and "removed" in data and "changed" in data
+
+
 def test_overview(client):
     o = client.get("/api/overview").json()
     ids = {s["id"]: s for s in o["schemes"]}

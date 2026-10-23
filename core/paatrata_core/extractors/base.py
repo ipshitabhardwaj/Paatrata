@@ -152,16 +152,20 @@ class CacheOnlyExtractor(Extractor):
 def friendly_error(e: Exception, model: str | None = None) -> str:
     """Turn SDK errors into messages that say what to do."""
     msg = str(e)
+    low = msg.lower()
+    if "429" in msg or "resource exhausted" in low or "quota" in low:
+        return "Gemini API quota reached — wait a minute and try again, or switch to cached results."
+    if "api key" in low and ("invalid" in low or "not valid" in low):
+        return "No valid Gemini API key configured. Set GEMINI_API_KEY in .env or environment variables."
     if "API_KEY_INVALID" in msg or "API key not valid" in msg:
         return "Gemini rejected the API key. Check GEMINI_API_KEY in .env (no quotes or spaces) and restart."
     if "PERMISSION_DENIED" in msg:
         return f"The API key has no access to model '{model}'. Try another model name from AI Studio."
     if "NOT_FOUND" in msg or "is not found" in msg or " 404" in msg:
         return f"Model '{model}' was not found. Set GEMINI_MODEL / GEMMA_MODEL in .env to a name listed in AI Studio."
-    if "RESOURCE_EXHAUSTED" in msg or "429" in msg:
-        return ("Rate limit / free-tier quota reached. Wait a minute, or check limits in AI Studio. "
-                "Cached results keep working (backend cache:<backend>:<model>).")
-    if "INVALID_ARGUMENT" in msg and "schema" in msg.lower():
+    if "authenticate" in low:
+        return "No valid Gemini API key configured. Set GEMINI_API_KEY in .env or environment variables."
+    if "INVALID_ARGUMENT" in msg and "schema" in low:
         return f"The model rejected the response schema: {msg[:300]}"
     return f"Model call failed: {msg[:500]}"
 
