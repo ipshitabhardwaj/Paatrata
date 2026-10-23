@@ -8,7 +8,7 @@ from ..schema import SchemeDraft
 from .base import CallMeta, ExtractionError, Extractor, with_retries
 from .prompts import system_prompt, user_prompt
 
-DEFAULT_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
+DEFAULT_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 
 
 def _client():
