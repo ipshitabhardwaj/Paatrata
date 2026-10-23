@@ -698,10 +698,10 @@ def chat(req: ChatRequest):
     fields = None
     _demo = os.environ.get("DEMO_MODE") or not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
 
+    # --- Step 1: Extract fields — try Gemini, then Groq, then regex ---
     if not _demo:
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         client = genai.Client(api_key=api_key)
-        # Step 1: Extract structured fields from conversational input via Gemini
         try:
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
@@ -720,9 +720,45 @@ def chat(req: ChatRequest):
             fields = extracted.get("fields", extracted)
         except Exception as e:
             with db.connect() as con:
-                db.log_call(con, "chat-extract", {"error": str(e), "input": req.message[:200]})
-            # Fall through to regex fallback
+                db.log_call(con, "chat-extract", {"error": str(e), "input": req.message[:200], "backend": "gemini"})
+            # Fall through to Groq
 
+    # --- Groq fallback (Llama) ---
+    if fields is None:
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if groq_key:
+            try:
+                import urllib.request
+                payload = json.dumps({
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [
+                        {"role": "system", "content": CHAT_SYSTEM},
+                        {"role": "user", "content": req.message},
+                    ],
+                    "temperature": 0,
+                    "max_tokens": 512,
+                }).encode()
+                rq = urllib.request.Request(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    data=payload,
+                    headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                )
+                with urllib.request.urlopen(rq, timeout=15) as rsp:
+                    raw = json.loads(rsp.read())["choices"][0]["message"]["content"].strip()
+                if raw.startswith("```"):
+                    raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+                if raw.endswith("```"):
+                    raw = raw[:-3]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+                extracted = json.loads(raw.strip())
+                fields = extracted.get("fields", extracted)
+            except Exception as e2:
+                with db.connect() as con:
+                    db.log_call(con, "chat-extract", {"error": str(e2), "input": req.message[:200], "backend": "groq"})
+                # Fall through to regex
+
+    # --- Regex fallback (no LLM) ---
     if fields is None:
         fields = _regex_extract(req.message)
         if not fields:
