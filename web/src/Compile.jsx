@@ -61,22 +61,23 @@ export default function Compile() {
 function Empty() {
   return (
     <div className="empty">
+      <div className="empty-icon">&#9881;</div>
       <h2>Compile a scheme</h2>
       <ol className="steps">
         <li>
-          <b>Extract.</b> Gemini (or Gemma) reads the notification into a fixed rule schema, quoting the source for every condition.
+          <b>Extract.</b> Gemini (or Groq/Gemma) reads the notification into a fixed rule schema, quoting the source for every condition.
         </li>
         <li>
           <b>Validate.</b> Code rejects any condition whose quote is not in the document, or whose value doesn't parse.
         </li>
         <li>
-          <b>Review.</b> A second Gemini pass looks for missing, misread and ambiguous conditions.
+          <b>Review.</b> A second pass looks for missing, misread and ambiguous conditions.
         </li>
         <li>
           <b>Approve.</b> An officer answers every open question. Only approved rules answer citizens, deterministically.
         </li>
       </ol>
-      <p className="muted">Pick a version on the left, or compile a new source.</p>
+      <p className="muted">Pick a version on the left, or compile a new source document above.</p>
     </div>
   );
 }
@@ -135,6 +136,7 @@ function CompileForm({ onDone }) {
           Model
           <select value={backend} onChange={(e) => setBackend(e.target.value)}>
             <option value="gemini">Gemini</option>
+            <option value="groq">Groq (Llama 3.1)</option>
             <option value="gemma-studio">Gemma 4 (AI Studio)</option>
             <option value="ollama">Gemma 4 (local)</option>
           </select>

@@ -1,16 +1,19 @@
-"""Extractor factory. Backends: gemini | gemma-studio | ollama | cache:<backend>:<model>."""
+"""Extractor factory. Backends: gemini | groq | gemma-studio | ollama | cache:<backend>:<model>."""
 from __future__ import annotations
 
 from .base import CacheOnlyExtractor, ExtractionError, ExtractionResult, Extractor
 from .gemini import GeminiExtractor
 from .gemma import GemmaStudioExtractor, OllamaExtractor
+from .groq import GroqExtractor
 
-BACKENDS = ("gemini", "gemma-studio", "ollama")
+BACKENDS = ("gemini", "groq", "gemma-studio", "ollama")
 
 
 def get_extractor(backend: str = "gemini", model: str | None = None, **kw) -> Extractor:
     if backend == "gemini":
         return GeminiExtractor(model, **kw)
+    if backend == "groq":
+        return GroqExtractor(model, **kw)
     if backend == "gemma-studio":
         return GemmaStudioExtractor(model, **kw)
     if backend == "ollama":
