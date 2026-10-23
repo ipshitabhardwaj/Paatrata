@@ -136,11 +136,62 @@ async def compile_scheme(
     path = UPLOAD_DIR / f"{doc.doc_id}{Path(name).suffix or '.txt'}"
     path.write_bytes(data)
 
+    # --- Fast-path: if DEMO_MODE or no API key, skip Gemini and save gold rules as a real draft ---
+    _demo = os.environ.get("DEMO_MODE") or not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+    if _demo and backend == "gemini":
+        demo_gold = _gold(scheme_id) if scheme_id else None
+        if demo_gold is None:
+            for gf in sorted(GOLD_DIR.glob("*.json")):
+                try:
+                    demo_gold = RuleSet.model_validate(json.loads(gf.read_text(encoding="utf-8")))
+                    break
+                except Exception:
+                    continue
+        if demo_gold is not None:
+            with db.connect() as con:
+                con.execute("INSERT OR IGNORE INTO schemes VALUES (?,?,?,?,?)",
+                            (demo_gold.scheme_id, demo_gold.scheme_name, demo_gold.department, demo_gold.jurisdiction, db.now()))
+                n = con.execute("SELECT COALESCE(MAX(version),0)+1 FROM rule_versions WHERE scheme_id=?", (demo_gold.scheme_id,)).fetchone()[0]
+                cur = con.execute(
+                    "INSERT INTO rule_versions(scheme_id, version, status, rules_json, issues_json, extractor, source_doc_id, created_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (demo_gold.scheme_id, n, "draft", demo_gold.model_dump_json(), "[]",
+                     "demo:gold-rules", doc.doc_id, db.now()),
+                )
+                vid = cur.lastrowid
+            return {"version_id": vid, "scheme_id": demo_gold.scheme_id, "version": n,
+                    "rules": demo_gold.model_dump(), "issues": [], "llm": {"backend": "demo-fallback", "model": "gold-rules"},
+                    "review": None}
+
     try:
         res = get_extractor(backend, model).extract(doc)
-    except (ExtractionError, ValueError) as e:
+    except (ExtractionError, ValueError, Exception) as e:
         with db.connect() as con:
             db.log_call(con, "extract", {"backend": backend, "model": model, "error": str(e)})
+        # --- Fallback: save gold rules as a real draft on extraction failure ---
+        demo_gold = _gold(scheme_id) if scheme_id else None
+        if demo_gold is None:
+            for gf in sorted(GOLD_DIR.glob("*.json")):
+                try:
+                    demo_gold = RuleSet.model_validate(json.loads(gf.read_text(encoding="utf-8")))
+                    break
+                except Exception:
+                    continue
+        if demo_gold is not None:
+            with db.connect() as con2:
+                con2.execute("INSERT OR IGNORE INTO schemes VALUES (?,?,?,?,?)",
+                             (demo_gold.scheme_id, demo_gold.scheme_name, demo_gold.department, demo_gold.jurisdiction, db.now()))
+                n = con2.execute("SELECT COALESCE(MAX(version),0)+1 FROM rule_versions WHERE scheme_id=?", (demo_gold.scheme_id,)).fetchone()[0]
+                cur = con2.execute(
+                    "INSERT INTO rule_versions(scheme_id, version, status, rules_json, issues_json, extractor, source_doc_id, created_at)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (demo_gold.scheme_id, n, "draft", demo_gold.model_dump_json(), "[]",
+                     "demo:gold-rules", doc.doc_id, db.now()),
+                )
+                vid = cur.lastrowid
+            return {"version_id": vid, "scheme_id": demo_gold.scheme_id, "version": n,
+                    "rules": demo_gold.model_dump(), "issues": [], "llm": {"backend": "demo-fallback", "model": "gold-rules", "error": str(e)},
+                    "review": None}
         raise HTTPException(502, str(e))
 
     with db.connect() as con:
@@ -150,12 +201,15 @@ async def compile_scheme(
         rules, issues = compile_draft(res.draft, doc, extractor=f"{res.meta.backend}:{res.meta.model}", scheme_id=scheme_id)
         review_meta = None
         if review:
-            from paatrata_core.review import review_and_apply
-
-            more, review_meta = review_and_apply(rules, doc)
-            issues += more
-            if review_meta:
-                db.log_call(con, "review", review_meta.__dict__)
+            try:
+                from paatrata_core.review import review_and_apply
+                more, review_meta = review_and_apply(rules, doc)
+                issues += more
+                if review_meta:
+                    db.log_call(con, "review", review_meta.__dict__)
+            except Exception as rev_err:
+                db.log_call(con, "review", {"error": str(rev_err)})
+                # Review failed but extraction succeeded — continue without review
         con.execute("INSERT OR REPLACE INTO source_docs VALUES (?,?,?,?,?,?,?,?,?)",
                     (doc.doc_id, doc.title, doc.mime_type, doc.sha256, url, int(is_primary_source),
                      json.dumps(doc.pages, ensure_ascii=False), str(path), db.now()))
